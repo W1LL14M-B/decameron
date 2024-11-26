@@ -1,18 +1,19 @@
-import React from 'react'
+
 import Reservation from './components/Reservation'
 import Availability from './components/Availability'
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 const DecameronApp = () => {
-  return (
-    <div>
+    return (
+        <div>
 
-<Reservation />
-<Availability/>
-
+            <Reservation />
 
 
-    </div>
-  )
+
+
+        </div>
+    )
 
 
 
