@@ -6,40 +6,7 @@ const Reservation = () => {
   // Estado para manejar la ciudad seleccionada
   const [selectedCity, setSelectedCity] = useState("");
   const [hotels, setHotels] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  
-  useEffect(() => {
-    if (selectedCity) {
-      setLoading(true);
-      // Primero, obtenemos los hoteles locales
-      const localHotels = hotelOptions[selectedCity] || [];
-
-      // Luego, intentamos obtener los hoteles desde el API
-      fetch(`http://127.0.0.1:8000/api/v1/hotels?city=${selectedCity}`)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error("Error al cargar los hoteles");
-          }
-          return response.json();
-        })
-        .then((data) => {
-          const apiHotels = data.hotels || [];
-          // Si el API devuelve hoteles, los usamos, de lo contrario, usamos los locales
-          setHotels(apiHotels.length > 0 ? apiHotels : localHotels);
-          setError(null);
-        })
-        .catch((err) => {
-          setError(err.message);
-          setHotels(localHotels); // Si hay error, usar los locales
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    } else {
-      setHotels([]);
-    }
-  }, [selectedCity]);
+  const [apiError, setApiError] = useState(null);
 
   // Hoteles por ciudad
   const hotelOptions = {
@@ -62,19 +29,140 @@ const Reservation = () => {
     boyaca: ["Hotel Refugio Rancho Tota", "Hotel Santa Inés"],
   };
 
+  const apiUrl = "http://localhost:8000/api/v1/hotels";
 
+  // Obtener datos del servidor
 
+  const fetchHotels = async () => {
+    try {
+      const response = await fetch(apiUrl);
+      console.log(response);
+      if (!response.ok) {
+        const errorMessage = await response.text();
+        throw new Error(`Error al obtener datos del servidor: ${errorMessage}`);
+      }
+      const data = await response.json();
+      setHotels(data);
+    } catch (error) {
+      console.error(error);
+      setApiError("Error al cargar los hoteles desde el servidor");
+    }
+  }; 
+  /*   const fetchHotels = async () => {
+    try {
+      const response = await fetch(apiUrl);
+      console.log(response);
+      const data = await response.json();
+      const dataWithIds = data.map((hotel, index) => ({
+        ...hotel,
+        id: index,
+      }));
+      setHotels(dataWithIds);
+    } catch (error) {
+      console.error(error);
+      setApiError("Error al cargar los hoteles desde el servidor");
 
-  // Manejar cambios en la ciudad seleccionada
-  const handleCityChange = (event) => {
+    }
+  }; */
+  /* const fetchHotels = async () => {
+    try {
+      const response = await fetch(apiUrl);
+      console.log(response); // Agrega este log para ver la respuesta
+      if (!response.ok) {
+        const errorMessage = await response.text(); // Puedes obtener más información del error
+        throw new Error(`Error al obtener datos del servidor: ${errorMessage}`);
+      }
+      const data = await response.json();
+      setHotels(data);
+    } catch (error) {
+      console.error(error);
+      setApiError("Error al cargar los hoteles desde el servidor");
+    }
+  }; */
+
+  // Crear un nuevo hotel
+  const addHotel = async (city, hotelName) => {
+    try {
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ city, hotelName }),
+      });
+      if (!response.ok) throw new Error("Error al añadir hotel");
+      fetchHotels(); // Actualizar la lista
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // Editar un hotel
+  const editHotel = async (hotelId, newDetails) => {
+    try {
+      const response = await fetch(`${apiUrl}/${hotelId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newDetails),
+      });
+      if (!response.ok) throw new Error("Error al actualizar hotel");
+      fetchHotels();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // Eliminar un hotel
+  const deleteHotel = async (hotelId) => {
+    try {
+      const response = await fetch(`${apiUrl}/${hotelId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Error al eliminar hotel");
+      fetchHotels();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+ /* const handleCityChange = (event) => {
     const city = event.target.value;
     setSelectedCity(city);
-    //setHotels(hotelOptions[city] || []);
+
+    // Actualiza la lista de hoteles según la ciudad seleccionada
+    if (hotelOptions[city]) {
+      setHotels(hotelOptions[city]);
+    } else {
+      fetchHotels(); // Si la ciudad no tiene opciones estáticas, carga desde la API
+    }
+  }; */
+
+  // Cargar los hoteles desde el servidor al montar el componente
+  useEffect(() => {
+    fetchHotels();
+  }, []);
+
+  // Manejar cambios en la ciudad seleccionada
+      const handleCityChange = (event) => {
+          const city = event.target.value;
+          setSelectedCity(city);
+          setHotels(hotelOptions[city] || []);
+        };
+   
+
+  // Manejar cambios en la ciudad seleccionada
+  /*   const handleCityChange = (event) => {
+    const city = event.target.value;
+    setSelectedCity(city);
+    setHotels(hotelOptions[city] || []);
   };
-  
+   */
   return (
     <div className="container mt-4">
       <h2>Reservas Decameron</h2>
+
       <form>
         <div className="row mb-3">
           {/* Ciudad */}
@@ -89,12 +177,20 @@ const Reservation = () => {
               onChange={handleCityChange}
             >
               <option value="">Selecciona una ciudad</option>
+              {Object.keys(hotelOptions).map((city, index) => (
+                <option key={index} value={city}>
+                  {city.charAt(0).toUpperCase() +
+                    city.slice(1).replace("_", " ")}
+                </option>
+              ))}
+               
+         <option value="">Selecciona una ciudad</option>
               <option value="cartagena">Cartagena</option>
               <option value="santamarta">Santamarta</option>
               <option value="isla_de_san_andres">Isla de San Andrés</option>
               <option value="quindio">Quindío</option>
               <option value="amazonas">Amazonas</option>
-              <option value="boyaca">Boyacá</option>
+              <option value="boyaca">Boyacá</option>  
             </select>
           </div>
           {/* Hoteles */}
@@ -105,32 +201,20 @@ const Reservation = () => {
             <select
               className="form-select"
               id="hotel"
-              disabled={loading || hotels.length === 0}
-              //disabled={hotels.length === 0}
+              disabled={hotels.length === 0}
             >
-                 <option value="">
-                {loading
-                  ? "Cargando hoteles..."
-                  : hotels.length === 0
-                  ? "Selecciona una ciudad primero"
-                  : "Selecciona un hotel"}
-              </option>
-           {/*    <option value="">
+              <option value="">
                 {hotels.length === 0
                   ? "Selecciona una ciudad primero"
                   : "Selecciona un hotel"}
-              </option> */}
+              </option>
               {hotels.map((hotel, index) => (
-                <option key={index} value={hotel}>
-                  {hotel}
-                </option>
-        
+                <option key={index} value={hotel}></option>
               ))}
+    
             </select>
           </div>
         </div>
-        {/*       error */}
-        {error && <p className="text-danger">Error: {error}</p>}
         <div className="row mb-3">
           {/* Dirección */}
           <div className="col-md-6">
@@ -184,7 +268,5 @@ const Reservation = () => {
     </div>
   );
 };
-
-
 
 export default Reservation;
